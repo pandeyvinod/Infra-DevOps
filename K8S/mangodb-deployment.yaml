@@ -1,0 +1,132 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mangodb-secret
+type: Opaque
+data:
+  # You can include additional key value pairs as you do with Opaque Secrets
+  mangodb-root-username: dXNlcm5hbWU=
+  mangodb-root-password: cGFzc3dvcmQ=
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mangodb-deployment
+  labels:
+    app: mangodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mangodb
+  template:
+    metadata:
+      labels:
+        app: mangodb
+    spec:
+      containers:
+      - name: mangodb
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mangodb-secret
+              key: mangodb-root-username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mangodb-secret
+              key: mangodb-root-password
+            
+
+---
+# service deployment service which communicate all mongodb pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+spec:
+  selector:
+    app: mangodb
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+
+
+
+---
+# creating the configmap which will be used by mongo-express pods to get the URL
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-configmap
+data:
+  # property-like keys; each key maps to a simple value
+  database-url: mongodb-service
+
+
+---
+# deploying the mongo-express to handle DB url and external services
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-express-deployment
+  labels:
+    app: mongo-express
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-express
+  template:
+    metadata:
+      labels:
+        app: mongo-express
+    spec:
+      containers:
+      - name: mongo-express
+        image: mongo-express
+        ports:
+        - containerPort: 8081
+        env:
+        - name: ME_CONFIG_MONGODB_ADMINUSERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mangodb-secret
+              key: mangodb-root-username
+        - name: ME_CONFIG_MONGODB_ADMINPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mangodb-secret
+              key: mangodb-root-password
+        - name: ME_CONFIG_MONGODB_SERVER
+          valueFrom:
+            configMapKeyRef:
+              name: mongodb-configmap
+              key: database-url
+
+---
+# mongo-express external service 
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-express-service
+spec:
+  selector:
+    app: mongo-express
+  type: LoadBalancer
+  ip: 
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+      nodePort: 30000
