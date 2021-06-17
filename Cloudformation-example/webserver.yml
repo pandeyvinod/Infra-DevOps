@@ -1,0 +1,83 @@
+
+
+Resources:
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Endpoint:
+            Ref: OperatorEMail
+          Protocol: email
+  WebServerGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AvailabilityZones:
+        Fn::GetAZs: ''
+      LaunchConfigurationName:
+        Ref: LaunchConfig
+      MinSize: '1'
+      MaxSize: '3'
+      LoadBalancerNames:
+      - Ref: ElasticLoadBalancer
+      NotificationConfiguration:
+        TopicARN:
+          Ref: NotificationTopic
+        NotificationTypes:
+        - autoscaling:EC2_INSTANCE_LAUNCH
+        - autoscaling:EC2_INSTANCE_LAUNCH_ERROR
+        - autoscaling:EC2_INSTANCE_TERMINATE
+        - autoscaling:EC2_INSTANCE_TERMINATE_ERROR
+      CreationPolicy:
+        ResourceSignal:
+          Timeout: PT15M
+          Count: '1'
+      UpdatePolicy:
+        AutoScalingRollingUpdate:
+          MinInstanceInService: '1'
+          MaxBatchSize: '1'
+          PauseTime: '1'
+          WaitOnResourceSignals: 'true'
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      comment: install a simple Application
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              httpd: []
+          files:
+            "/var/www/html/index.html":
+              content:
+                Fn::Join:
+                - "\n"
+                - - <img src="
+                  - Fn::FindInMap:
+                    - Region2Examples
+                    - Ref: AWS::Region
+                    - Examples
+                  - /cloudformation_graphic.png" alt="AWS CloudFormation Logo"/>
+                  - "<h1>Congratulations, you have successfully launched the AWS CloudFormation
+                    sample.</h1>"
+                mode: '000644'
+                owner: root
+                group: root
+            "/etc/cfn/cfn-hup.conf":
+              content:
+                Fn::Join:
+                - ''
+                - - "[main]\n"
+                  - stack=
+                  - Ref: AWS::StackId
+                  - "\n"
+                  - region=
+                  - Ref: AWS::Region
+                  - "\n"
+              mode: '000400'
+              owner: root
+              group: root
+            "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+              content:
+                
+
+          
