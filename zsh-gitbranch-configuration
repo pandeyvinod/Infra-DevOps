@@ -13,4 +13,8 @@ PROMPT='%n in ${PWD/#$HOME/~} ${vcs_info_msg_0_} > '
 
 Article which i refer : https://www.themoderncoder.com/add-git-branch-information-to-your-zsh-prompt/
 
+complete information regarding the zsh vcsinfo: https://arjanvandergaag.nl/blog/customize-zsh-prompt-with-vcs-info.html 
+
+
+
 
